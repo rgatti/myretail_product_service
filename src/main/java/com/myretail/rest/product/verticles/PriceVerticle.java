@@ -1,4 +1,4 @@
-package com.myretail.rest.product.workers;
+package com.myretail.rest.product.verticles;
 
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.DocumentReference;

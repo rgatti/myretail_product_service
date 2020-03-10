@@ -4,8 +4,9 @@ import com.myretail.model.Price;
 import com.myretail.model.Product;
 import com.myretail.rest.product.messages.PriceMessageCodec;
 import com.myretail.rest.product.messages.ProductMessageCodec;
-import com.myretail.rest.product.workers.PriceVerticle;
-import com.myretail.rest.product.workers.ProductVerticle;
+import com.myretail.rest.product.verticles.PriceVerticle;
+import com.myretail.rest.product.verticles.ProductResourceVerticle;
+import com.myretail.rest.product.verticles.ProductVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
@@ -13,6 +14,8 @@ import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 /**
@@ -23,9 +26,13 @@ import java.util.logging.Logger;
  */
 public class Launcher {
 
-  // Worker verticles to deploy
-  private static final List<Class<? extends Verticle>> WORKERS = List.of(PriceVerticle.class,
+  // Worker verticles
+  private static final List<Class<? extends Verticle>> WORKERS = List.of(
+      PriceVerticle.class,
       ProductVerticle.class);
+  // Front end verticles
+  private static final List<Class<? extends Verticle>> FRONTEND = List.of(
+      ProductResourceVerticle.class);
 
   private static final Logger logger = Logger.getLogger(Launcher.class.getName());
 
@@ -39,37 +46,37 @@ public class Launcher {
     vertx.eventBus().registerDefaultCodec(Product.class, new ProductMessageCodec());
     vertx.eventBus().registerDefaultCodec(Price.class, new PriceMessageCodec());
 
-    /* Deploy worker verticles
+    /* Deploy verticles
      *
-     * Capture the result of worker start up. If any of the workers fail to start stop the product
-     * service.
+     * Capture the result of start up. If any of the verticles fail stop the product service.
      */
 
-    // Futures for all worker verticles
+    // Futures for all verticles
     //
     // We have to use a raw type because the CompositeFuture can not join on polymorphic types.
-    @SuppressWarnings("rawtypes") final var workers = new ArrayList<Future>();
+    @SuppressWarnings("rawtypes") final var verticles = new ArrayList<Future>();
 
-    // Deploy workers
+    BiConsumer<Class, DeploymentOptions> deployVerticle = (cls, options) -> {
+      Future<String> future = options == null ?
+          Future.future(promise -> vertx.deployVerticle(cls.getName(), promise)) :
+          Future.future(promise -> vertx.deployVerticle(cls.getName(), options, promise));
+
+      verticles.add(future);
+    };
+
+    // Deploy verticles
     DeploymentOptions workerOptions = new DeploymentOptions().setWorker(true);
-    WORKERS.forEach(
-        cls -> {
-          Future<String> future = Future.future(promise -> vertx
-              .deployVerticle(cls, workerOptions, promise));
-
-          workers.add(future);
-        });
+    WORKERS.forEach(cls -> deployVerticle.accept(cls, workerOptions));
+    FRONTEND.forEach(cls -> deployVerticle.accept(cls, null));
 
     // Wait for workers to start up, then deploy front end product resource verticle
-    CompositeFuture.join(workers)
+    CompositeFuture.join(verticles)
         // if any worker fails stop service
         .onFailure(result -> {
           result.printStackTrace();
           vertx.close();
-          logger.severe("Failed to start all worker verticles ... service stopped");
+          logger.severe("Failed to start all verticles ... service stopped");
         })
-        // start front end product resource, log on complete
-        .onSuccess(r -> vertx.deployVerticle(new ProductResourceVerticle(),
-            r0 -> logger.info("Service started")));
+        .onSuccess(r -> logger.info("Service started"));
   }
 }

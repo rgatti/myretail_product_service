@@ -1,7 +1,8 @@
-package com.myretail.rest.product;
+package com.myretail.rest.product.verticles;
 
 import com.myretail.model.Price;
 import com.myretail.model.Product;
+import com.myretail.rest.product.VerticleBusAddress;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;

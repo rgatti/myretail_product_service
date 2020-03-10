@@ -1,4 +1,4 @@
-package com.myretail.rest.product.workers;
+package com.myretail.rest.product.verticles;
 
 import com.myretail.model.Product;
 import com.myretail.model.util.InvalidJsonData;
