@@ -17,6 +17,8 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -40,7 +42,9 @@ public class ProductResourceVerticle extends AbstractVerticle {
     // Create routes to handlers
     Router route = Router.router(vertx);
     route.get(ENDPOINT + "/:id").handler(this::getProduct);
-    route.post(ENDPOINT + "/:id/price").handler(this::updateProductPrice);
+    route.post(ENDPOINT + "/:id/price")
+        .handler(BodyHandler.create())
+        .handler(this::updateProductPrice);
 
     // Create http server and reply to launcher on complete
     vertx.createHttpServer()
@@ -89,7 +93,38 @@ public class ProductResourceVerticle extends AbstractVerticle {
   }
 
   private void updateProductPrice(RoutingContext context) {
-    String id = context.request().getParam("id");
-//    Action action = Action.update()
+    HttpServerRequest request = context.request();
+    HttpServerResponse response = context.response();
+
+    // Create action for updating price data
+    ProductId id = ProductId.valueOf(request.getParam("id"));
+    Price price;
+
+    logger.info("Received update price for " + id);
+
+    // Parse price data from body
+    try {
+      price = context.getBodyAsJson().mapTo(Price.class);
+    } catch (NullPointerException | ClassCastException e) {
+      logger.log(Level.SEVERE, "Unable to parse json body", e);
+      response.setStatusCode(400)
+          .end("Unable to read price json");
+      return;
+    }
+
+    // Construct action
+    JsonObject actionData = new JsonObject();
+    actionData.put("id", JsonObject.mapFrom(id));
+    actionData.put("price", JsonObject.mapFrom(price));
+    Action action = Action.update(actionData);
+
+    // Call price verticle
+    eventBus.<String>request(VerticleBusAddress.PRICE, action, asyncResult -> {
+      if (asyncResult.succeeded()) {
+        response.end(asyncResult.result().body());
+      } else {
+        response.end(asyncResult.cause().getMessage());
+      }
+    });
   }
 }

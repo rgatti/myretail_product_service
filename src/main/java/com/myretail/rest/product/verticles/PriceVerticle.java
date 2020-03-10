@@ -5,8 +5,11 @@ import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.FirestoreOptions;
+import com.google.cloud.firestore.SetOptions;
 import com.google.cloud.firestore.WriteResult;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.myretail.model.Price;
+import com.myretail.model.Product;
 import com.myretail.model.ProductId;
 import com.myretail.rest.product.VerticleBusAddress;
 import com.myretail.rest.product.messages.Action;
@@ -15,6 +18,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonObject;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -75,9 +79,30 @@ public class PriceVerticle extends AbstractVerticle {
 
     // Register a handler for messages to this verticle
     EventBus bus = vertx.eventBus();
-    bus.consumer(VerticleBusAddress.PRICE, this::getPrice);
+    bus.consumer(VerticleBusAddress.PRICE, this::handleRequest);
 
     startPromise.complete();
+  }
+
+  /**
+   * Handle event bus messages.
+   * <p>
+   * Determine which action is being performed and forward to the correct method.
+   *
+   * @param message the message received
+   */
+  private void handleRequest(Message<Action> message) {
+    Action action = message.body();
+    switch (action.getType()) {
+      case Action.GET:
+        getPrice(message);
+        break;
+      case Action.UPDATE:
+        setPrice(message);
+        break;
+      default:
+        message.fail(0, "invalid action");
+    }
   }
 
   private void getPrice(Message<Action> message) {
@@ -125,18 +150,32 @@ public class PriceVerticle extends AbstractVerticle {
     }
   }
 
-  private void setPrice(Message<String> message) {
+  private void setPrice(Message<Action> message) {
+    logger.info("Received set price message");
+
+    ProductId id;
+    Price price;
+
+    // Parse product id and price from message
+    try {
+      JsonObject actionData =message.body().getData();
+      id = actionData.getJsonObject("id").mapTo(ProductId.class);
+      price = actionData.getJsonObject("price").mapTo(Price.class);
+    } catch (NumberFormatException e) {
+      message.fail(1, "unable to read message data");
+      return; // stop processing
+    }
+
     // Open new connection
     try (Firestore db = firestoreOptions.getService()) {
-      DocumentReference docRef = db.collection("product").document("tcin_15643793");
+      DocumentReference docRef = db.collection("product").document("tcin_" + id.value);
       Map<String, Object> data = new HashMap<>();
-      data.put("price_value", 5.00);
-      data.put("price_currency_code", "USD");
+      data.put("price_value", price.getValue());
+      data.put("price_currency_code", price.getCurrency());
       //asynchronously write data
       ApiFuture<WriteResult> result = docRef.set(data);
-      // ...
-      // result.get() blocks on response
 
+      message.reply(result.get().getUpdateTime().toString());
     } catch (InterruptedException | ExecutionException e) {
       logger.log(Level.WARNING, "Unable to access Firebase", e);
       message.fail(1, "unable to access Firestore");
