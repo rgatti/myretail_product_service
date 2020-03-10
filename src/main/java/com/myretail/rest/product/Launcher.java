@@ -4,31 +4,38 @@ import com.myretail.model.Price;
 import com.myretail.model.Product;
 import com.myretail.rest.product.messages.PriceMessageCodec;
 import com.myretail.rest.product.messages.ProductMessageCodec;
+import com.myretail.rest.product.workers.PriceVerticle;
+import com.myretail.rest.product.workers.ProductVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
+import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
 /**
- * Launcher for the vertx product service.
+ * Launch the product service.
  * <p>
- * This class simply launches vertx verticles which handle all processing of requests and data
- * access.
+ * This class is a wrapper to configure and deploy vertx verticles which handle all processing. All
+ * verticles are deployed relative to this class.
  */
 public class Launcher {
 
-  public static final String WORKERS_PACKAGE = "workers";
-  public static final List<String> WORKERS = List.of("PriceVerticle", "ProductVerticle");
-  private static Logger logger = Logger.getLogger(Launcher.class.getName());
+  // Worker verticles to deploy
+  private static final List<Class<? extends Verticle>> WORKERS = List.of(PriceVerticle.class,
+      ProductVerticle.class);
+
+  private static final Logger logger = Logger.getLogger(Launcher.class.getName());
 
   public static void main(String[] args) {
-    logger.info("Starting service");
+    logger.info("Starting product service");
     Vertx vertx = Vertx.vertx();
 
-    // Register default codes for models
+    // Register default model codecs
+    //
+    // These allow concrete models to be passed as messages between verticles.
     vertx.eventBus().registerDefaultCodec(Product.class, new ProductMessageCodec());
     vertx.eventBus().registerDefaultCodec(Price.class, new PriceMessageCodec());
 
@@ -46,31 +53,23 @@ public class Launcher {
     // Deploy workers
     DeploymentOptions workerOptions = new DeploymentOptions().setWorker(true);
     WORKERS.forEach(
-        name -> {
+        cls -> {
           Future<String> future = Future.future(promise -> vertx
-              .deployVerticle(verticleName(WORKERS_PACKAGE, name), workerOptions, promise));
+              .deployVerticle(cls, workerOptions, promise));
+
           workers.add(future);
         });
 
     // Wait for workers to start up, then deploy front end product resource verticle
     CompositeFuture.join(workers)
+        // if any worker fails stop service
         .onFailure(result -> {
           result.printStackTrace();
           vertx.close();
           logger.severe("Failed to start all worker verticles ... service stopped");
         })
-        .onSuccess(result -> vertx.deployVerticle(verticleName("ProductResourceVerticle"),
-            e -> logger.info("Service started")));
-  }
-
-  // Utility methods to build verticle page names
-
-  private static String verticleName(String packageName, String className) {
-    return verticleName(packageName + "." + className);
-  }
-
-  private static String verticleName(String className) {
-    String packageName = Launcher.class.getPackageName();
-    return packageName + "." + className;
+        // start front end product resource, log on complete
+        .onSuccess(r -> vertx.deployVerticle(new ProductResourceVerticle(),
+            r0 -> logger.info("Service started")));
   }
 }

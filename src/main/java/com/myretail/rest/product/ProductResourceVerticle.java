@@ -22,12 +22,10 @@ import java.util.logging.Logger;
  */
 public class ProductResourceVerticle extends AbstractVerticle {
 
-  private static Logger logger = Logger.getLogger(ProductResourceVerticle.class.getName());
+  // This services endpoint
+  private static final String ENDPOINT = "/rest/product";
+  private static final Logger logger = Logger.getLogger(ProductResourceVerticle.class.getName());
 
-  // This service endpoint
-  public static final String ENDPOINT = "/rest/product";
-
-  //  private HttpServer server;
   private EventBus eventBus;
 
   @Override
@@ -35,12 +33,12 @@ public class ProductResourceVerticle extends AbstractVerticle {
     logger.info("Starting product resource verticle");
     eventBus = vertx.eventBus();
 
-    // Add endpoint handlers
+    // Create routes to handlers
     Router route = Router.router(vertx);
     route.get(ENDPOINT + "/:id").handler(this::getProduct);
-    route.post(ENDPOINT + "/:id/price").handler(this::updateProductPrice);
+//    route.post(ENDPOINT + "/:id/price").handler(this::updateProductPrice);
 
-    // Create http server and reply to the Launcher if successful
+    // Create http server and reply to launcher on complete
     vertx.createHttpServer()
         .requestHandler(route)
         .listen(8080, asyncResult -> {
@@ -52,6 +50,10 @@ public class ProductResourceVerticle extends AbstractVerticle {
         });
   }
 
+  /**
+   * Handle
+   * @param context
+   */
   private void getProduct(RoutingContext context) {
     HttpServerRequest request = context.request();
     HttpServerResponse response = context.response();
@@ -84,7 +86,7 @@ public class ProductResourceVerticle extends AbstractVerticle {
         });
   }
 
-  private void updateProductPrice(RoutingContext context) {
+//  private void updateProductPrice(RoutingContext context) {
 //    String id = context.request().getParam("id");
-  }
+//  }
 }

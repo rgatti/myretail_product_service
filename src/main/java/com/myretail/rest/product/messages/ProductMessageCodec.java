@@ -6,7 +6,9 @@ import io.vertx.core.eventbus.MessageCodec;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Marshall Product model across the message bus.
+ * Marshall Product model across the event bus.
+ *
+ * @see io.vertx.core.eventbus.MessageCodec
  */
 public class ProductMessageCodec implements MessageCodec<Product, Product> {
 
