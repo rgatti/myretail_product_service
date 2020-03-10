@@ -2,7 +2,9 @@ package com.myretail.rest.product.verticles;
 
 import com.myretail.model.Price;
 import com.myretail.model.Product;
+import com.myretail.model.ProductId;
 import com.myretail.rest.product.VerticleBusAddress;
+import com.myretail.rest.product.messages.Action;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -12,6 +14,7 @@ import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import java.util.logging.Logger;
@@ -37,7 +40,7 @@ public class ProductResourceVerticle extends AbstractVerticle {
     // Create routes to handlers
     Router route = Router.router(vertx);
     route.get(ENDPOINT + "/:id").handler(this::getProduct);
-//    route.post(ENDPOINT + "/:id/price").handler(this::updateProductPrice);
+    route.post(ENDPOINT + "/:id/price").handler(this::updateProductPrice);
 
     // Create http server and reply to launcher on complete
     vertx.createHttpServer()
@@ -51,23 +54,21 @@ public class ProductResourceVerticle extends AbstractVerticle {
         });
   }
 
-  /**
-   * Handle
-   * @param context
-   */
   private void getProduct(RoutingContext context) {
     HttpServerRequest request = context.request();
     HttpServerResponse response = context.response();
 
-    String id = request.getParam("id");
+    // Create get action for requesting product and price data
+    ProductId id = ProductId.valueOf(request.getParam("id"));
+    Action action = Action.get(JsonObject.mapFrom(id));
 
-    logger.info("Received product get request for " + id);
+    logger.info("Received request for " + id);
 
     // Request product and price from workers
     Future<Message<Product>> productFuture = Future
-        .future(promise -> eventBus.request(VerticleBusAddress.PRODUCT, id, promise));
+        .future(promise -> eventBus.request(VerticleBusAddress.PRODUCT, action, promise));
     Future<Message<Price>> priceFuture = Future
-        .future(promise -> eventBus.request(VerticleBusAddress.PRICE, id, promise));
+        .future(promise -> eventBus.request(VerticleBusAddress.PRICE, action, promise));
 
     CompositeFuture.join(productFuture, priceFuture)
         .onFailure(asyncResult -> response.setStatusCode(500)
@@ -87,7 +88,8 @@ public class ProductResourceVerticle extends AbstractVerticle {
         });
   }
 
-//  private void updateProductPrice(RoutingContext context) {
-//    String id = context.request().getParam("id");
-//  }
+  private void updateProductPrice(RoutingContext context) {
+    String id = context.request().getParam("id");
+//    Action action = Action.update()
+  }
 }

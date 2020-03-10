@@ -7,7 +7,9 @@ import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.FirestoreOptions;
 import com.google.cloud.firestore.WriteResult;
 import com.myretail.model.Price;
+import com.myretail.model.ProductId;
 import com.myretail.rest.product.VerticleBusAddress;
+import com.myretail.rest.product.messages.Action;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -78,13 +80,14 @@ public class PriceVerticle extends AbstractVerticle {
     startPromise.complete();
   }
 
-  private void getPrice(Message<String> message) {
+  private void getPrice(Message<Action> message) {
     logger.info("Received get price message");
-    int productId;
+
+    ProductId id;
 
     // Parse product id from message
     try {
-      productId = Integer.parseInt(message.body());
+      id = message.body().getData().mapTo(ProductId.class);
     } catch (NumberFormatException e) {
       message.fail(1, "unable to read product id in message");
       return; // stop processing
@@ -94,7 +97,7 @@ public class PriceVerticle extends AbstractVerticle {
     try (Firestore db = firestoreOptions.getService()) {
       // Fetch document reference
       DocumentReference reference = db.collection("product")
-          .document("tcin_" + productId);
+          .document("tcin_" + id.value);
       ApiFuture<DocumentSnapshot> query = reference.get();
       // ...
       // query.get() blocks on response but we're in a worker verticle

@@ -1,9 +1,11 @@
 package com.myretail.rest.product.verticles;
 
 import com.myretail.model.Product;
+import com.myretail.model.ProductId;
 import com.myretail.model.util.InvalidJsonData;
 import com.myretail.model.util.ProductApiMapper;
 import com.myretail.rest.product.VerticleBusAddress;
+import com.myretail.rest.product.messages.Action;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -58,21 +60,22 @@ public class ProductVerticle extends AbstractVerticle {
     startPromise.complete();
   }
 
-  private void findProduct(Message<String> message) {
+  private void findProduct(Message<Action> message) {
     logger.info("Received find product message");
-    int productId;
+
+    ProductId id;
 
     // Parse product id from message
     try {
-      productId = Integer.parseInt(message.body());
-    } catch (NumberFormatException e) {
+      id = message.body().getData().mapTo(ProductId.class);
+    } catch (IllegalArgumentException e) {
       message.fail(1, "unable to read product id in message");
       return;
     }
 
     // Request product data from backing service
     WebClient.create(vertx)
-        .get(443, API_HOST, buildRequest(productId))
+        .get(443, API_HOST, buildRequest(id.value))
         .ssl(true)
         .putHeader("Accept", "application/json")
         .as(BodyCodec.jsonObject())// decode response as json
