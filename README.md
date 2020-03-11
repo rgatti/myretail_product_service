@@ -4,14 +4,14 @@
 
 * [Summary](#summary)
 * [Architecture](#arch)
+* [Build](#build)
 
-<a href="#summary"></a>
-## Summary
+## <a href="#summary">Summary</a>
 
 This is a case study project of a RESTful service broken into three separate microservices using the Virt.x framework. The three services are a front end controller and two backend resource managers. The backend resource manager handle asynchronous calls to remote APIs and a cloud database (Google Cloud Firestore).
 
-<a href="#arch"></a>
-## Architecture
+
+## <a href="#arch">Architecture</a>
 
 Below is a high-level overview of the architecture.
 ![architecture](https://raw.githubusercontent.com/rgatti/myretail_product_service/master/doc/architecture0.png)
@@ -20,7 +20,7 @@ In Vert.x, `Verticle`s are used to isolate responsibility. A `Launcher` class co
 
 The `ServiceVertice` is the entry point for the entire service. It interacts with the two worker verticles across the Vert.x event bus. The event bus provides an efficient method of interprocess communication.
 
-## Build
+## <a href="#build">Build</a>
 
 The application is built with Maven. Some unit and itegration tests are automatically run with the surefire and failsafe plugins, respectfully.
 
