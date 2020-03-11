@@ -10,7 +10,7 @@ import io.vertx.core.Promise;
 public class Product {
   private int id;
   private String title;
-  private Price price = new Price();
+  private Price price;
 
   public Product(int id, String title) {
     this.id = id;
@@ -23,6 +23,10 @@ public class Product {
 
   public String getTitle() {
     return title;
+  }
+
+  public void setPrice(Price price) {
+    this.price = price;
   }
 
   public Price getPrice() {

@@ -1,4 +1,4 @@
-package com.myretail.rest.product.messages;
+package com.myretail.rest.product.message.codec;
 
 import com.myretail.model.Price;
 import io.vertx.core.buffer.Buffer;
@@ -10,7 +10,7 @@ import io.vertx.core.json.JsonObject;
  *
  * @see io.vertx.core.eventbus.MessageCodec
  */
-public class PriceMessageCodec implements MessageCodec<Price, Price> {
+public class PriceCodec implements MessageCodec<Price, Price> {
 
   @Override
   public void encodeToWire(Buffer buffer, Price price) {

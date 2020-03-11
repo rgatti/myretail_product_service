@@ -1,4 +1,4 @@
-package com.myretail.rest.product.messages;
+package com.myretail.rest.product.message.codec;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -7,7 +7,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.buffer.impl.BufferImpl;
 import org.junit.jupiter.api.Test;
 
-public class PriceMessageCodecTests {
+public class PriceCodecTests {
 
   private static final int RAW_JSON_LENGTH = 30;
   private static final String RAW_JSON = "{\"value\":1.0,\"currency\":\"USD\"}";
@@ -15,7 +15,7 @@ public class PriceMessageCodecTests {
   private static final double PRICE_VALUE = 1.00;
   private static final String PRICE_CURRENCY_CODE = "USD";
 
-  private static PriceMessageCodec codec = new PriceMessageCodec();
+  private static PriceCodec codec = new PriceCodec();
 
   @Test
   void encode() {

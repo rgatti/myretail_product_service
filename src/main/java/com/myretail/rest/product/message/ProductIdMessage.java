@@ -1,6 +1,4 @@
-package com.myretail.model;
-
-import io.vertx.core.json.JsonObject;
+package com.myretail.rest.product.message;
 
 /**
  * Model a product id.
@@ -9,12 +7,12 @@ import io.vertx.core.json.JsonObject;
  * communication. Models can easily be sent across a message bus. Models also provide compile-time
  * validation of data.
  */
-public class ProductId {
+public class ProductIdMessage {
 
   public int value;
 
-  public static ProductId valueOf(String s) {
-    ProductId id = new ProductId();
+  public static ProductIdMessage valueOf(String s) {
+    ProductIdMessage id = new ProductIdMessage();
     id.value = Integer.parseInt(s);
     return id;
   }
